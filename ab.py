@@ -202,6 +202,7 @@ def cmd_compress(args):
             "completeness_pass": None,
             "completeness_note": "",
             "compressor_latency_ms": None,
+            "code_quality": None,
             "notes": "",
         },
         {
@@ -219,6 +220,7 @@ def cmd_compress(args):
             "completeness_pass": None,
             "completeness_note": "",
             "compressor_latency_ms": sem_latency,
+            "code_quality": None,
             "notes": "",
         },
         {
@@ -236,6 +238,7 @@ def cmd_compress(args):
             "completeness_pass": None,
             "completeness_note": "",
             "compressor_latency_ms": cav_latency,
+            "code_quality": None,
             "notes": "",
         },
     ]
@@ -279,6 +282,11 @@ def cmd_record(args):
     entry["ran"] = args.ran == "true"
     entry["completeness_pass"] = args.completeness_pass == "true"
     entry["completeness_note"] = args.completeness_note
+    if args.code_quality_score is not None:
+        entry["code_quality"] = {
+            "score": args.code_quality_score,
+            "note": args.code_quality_note,
+        }
     entry["notes"] = args.notes
 
     save_log(args.log, entries)
@@ -329,6 +337,9 @@ def main():
     pr.add_argument("--ran", required=True, choices=["true", "false"])
     pr.add_argument("--completeness-pass", required=True, choices=["true", "false"])
     pr.add_argument("--completeness-note", default="", metavar="TEXT")
+    pr.add_argument("--code-quality-score", type=int, default=None, choices=range(1, 6), metavar="N",
+                    help="Code quality 1-5 (1=poor, 5=excellent)")
+    pr.add_argument("--code-quality-note", default="", metavar="TEXT")
     pr.add_argument("--notes", default="", metavar="TEXT")
 
     args = parser.parse_args()
