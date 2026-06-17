@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravity Simulator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+  #controls { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: #16213e; flex-wrap: wrap; }
+  #controls label { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  #controls input[type="range"] { width: 120px; accent-color: #e94560; }
+  #controls input[type="number"] { width: 60px; padding: 4px 6px; background: #0f3460; border: 1px solid #e94560; color: #e0e0e0; border-radius: 4px; font-size: 14px; }
+  button { padding: 6px 14px; background: #e94560; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #c73650; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #stats { margin-left: auto; font-size: 13px; opacity: 0.7; }
+  canvas { flex: 1; display: block; }
+</style>
+</head>
+<body>
+
+<div id="controls">
+  <label>Gravity: <input type="range" id="gravitySlider" min="0.05" max="2" step="0.05" value="0.5"> <span id="gravityVal">0.50</span></label>
+  <label>Balls: <input type="number" id="ballCount" min="1" max="200" value="1"></label>
+  <button id="setBtn">Set</button>
+  <button id="addBtn">+ Add Ball</button>
+  <button id="startBtn">Start</button>
+  <button id="resetBtn">Reset</button>
+  <span id="stats"></span>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const gravitySlider = document.getElementById('gravitySlider');
+const gravityVal = document.getElementById('gravityVal');
+const ballCountInput = document.getElementById('ballCount');
+const setBtn = document.getElementById('setBtn');
+const addBtn = document.getElementById('addBtn');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const stats = document.getElementById('stats');
+
+let balls = [];
+let running = false;
+let animId = null;
+let gravity = 0.5;
+const RESTITUTION = 0.75;
+const FRICTION = 0.99;
+const BALL_COLORS = ['#e94560','#0f3460','#533483','#48c9b0','#f39c12','#e74c3c','#3498db','#2ecc71','#9b59b6','#1abc9c'];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - document.getElementById('controls').offsetHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function randomBall() {
+  const radius = 12 + Math.random() * 18;
+  return {
+    x: radius + Math.random() * (canvas.width - radius * 2),
+    y: radius + Math.random() * (canvas.height * 0.4),
+    vx: (Math.random() - 0.5) * 6,
+    vy: 0,
+    radius,
+    color: BALL_COLORS[Math.floor(Math.random() * BALL_COLORS.length)],
+    mass: radius
+  };
+}
+
+function setBalls(n) {
+  balls = [];
+  for (let i = 0; i < n; i++) balls.push(randomBall());
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#0f3460';
+  ctx.fillRect(0, canvas.height - 2, canvas.width, 2);
+
+  for (const b of balls) {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+    ctx.fillStyle = b.color;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(b.x - b.radius * 0.3, b.y - b.radius * 0.3, b.radius * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fill();
+  }
+}
+
+function resolveBallCollision(a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const minDist = a.radius + b.radius;
+
+  if (dist >= minDist || dist === 0) return;
+
+  const nx = dx / dist;
+  const ny = dy / dist;
+  const overlap = minDist - dist;
+  const totalMass = a.mass + b.mass;
+
+  a.x -= nx * overlap * (b.mass / totalMass);
+  a.y -= ny * overlap * (b.mass / totalMass);
+  b.x += nx * overlap * (a.mass / totalMass);
+  b.y += ny * overlap * (a.mass / totalMass);
+
+  const dvx = a.vx - b.vx;
+  const dvy = a.vy - b.vy;
+  const dvDotN = dvx * nx + dvy * ny;
+
+  if (dvDotN <= 0) return;
+
+  const impulse = (2 * dvDotN) / totalMass;
+  a.vx -= impulse * b.mass * nx * RESTITUTION;
+  a.vy -= impulse * b.mass * ny * RESTITUTION;
+  b.vx += impulse * a.mass * nx * RESTITUTION;
+  b.vy += impulse * a.mass * ny * RESTITUTION;
+}
+
+function update() {
+  for (const b of balls) {
+    b.vy += gravity;
+    b.vx *= FRICTION;
+    b.x += b.vx;
+    b.y += b.vy;
+
+    if (b.y + b.radius > canvas.height) {
+      b.y = canvas.height - b.radius;
+      b.vy *= -RESTITUTION;
+      b.vx *= FRICTION;
+    }
+
+    if (b.x - b.radius < 0) {
+      b.x = b.radius;
+      b.vx = Math.abs(b.vx) * RESTITUTION;
+    } else if (b.x + b.radius > canvas.width) {
+      b.x = canvas.width - b.radius;
+      b.vx = -Math.abs(b.vx) * RESTITUTION;
+    }
+  }
+
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i + 1; j < balls.length; j++) {
+      resolveBallCollision(balls[i], balls[j]);
+    }
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  stats.textContent = balls.length + ' ball' + (balls.length !== 1 ? 's' : '');
+  animId = requestAnimationFrame(loop);
+}
+
+function start() {
+  if (running) return;
+  running = true;
+  startBtn.textContent = 'Pause';
+  loop();
+}
+
+function pause() {
+  running = false;
+  startBtn.textContent = 'Start';
+  if (animId) cancelAnimationFrame(animId);
+}
+
+gravitySlider.addEventListener('input', () => {
+  gravity = parseFloat(gravitySlider.value);
+  gravityVal.textContent = gravity.toFixed(2);
+});
+
+setBtn.addEventListener('click', () => {
+  const n = Math.max(1, Math.min(200, parseInt(ballCountInput.value) || 1));
+  ballCountInput.value = n;
+  setBalls(n);
+  if (!running) draw();
+});
+
+addBtn.addEventListener('click', () => {
+  balls.push(randomBall());
+  ballCountInput.value = balls.length;
+  if (!running) draw();
+});
+
+startBtn.addEventListener('click', () => {
+  if (running) pause(); else start();
+});
+
+resetBtn.addEventListener('click', () => {
+  pause();
+  setBalls(parseInt(ballCountInput.value) || 1);
+  draw();
+});
+
+setBalls(1);
+draw();
+</script>
+</body>
+</html>

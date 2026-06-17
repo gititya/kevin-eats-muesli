@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habits</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Habits</h1>
+      <button id="add-habit-btn">+ Add</button>
+    </header>
+
+    <div id="add-habit-form" class="hidden">
+      <input type="text" id="habit-name-input" placeholder="Habit name" maxlength="50">
+      <div class="form-actions">
+        <button id="save-habit-btn">Save</button>
+        <button id="cancel-habit-btn">Cancel</button>
+      </div>
+    </div>
+
+    <section id="today-section">
+      <div id="date-nav" class="date-nav">
+        <button class="prev-day" aria-label="Previous day">&#8249;</button>
+        <span class="date-display"></span>
+        <button class="next-day" aria-label="Next day">&#8250;</button>
+      </div>
+      <div id="habits-list"></div>
+    </section>
+
+    <section id="heatmap-section">
+      <h2>Progress</h2>
+      <div id="heatmaps"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predator–Prey Simulation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #0f1117;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    letter-spacing: -0.02em;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 20px;
+  }
+  .container {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .card {
+    background: #1a1d27;
+    border: 1px solid #2a2d3a;
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .stat {
+    text-align: center;
+    padding: 12px 8px;
+    background: #12141c;
+    border-radius: 8px;
+  }
+  .stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .rabbit-color { color: #4ade80; }
+  .fox-color { color: #f87171; }
+  .time-color { color: #60a5fa; }
+  canvas {
+    width: 100%;
+    height: 260px;
+    display: block;
+    border-radius: 8px;
+    background: #12141c;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+  .slider-header span:last-child {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #2a2d3a;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4ade80;
+    cursor: pointer;
+    border: 2px solid #0f1117;
+  }
+  input[type="range"].fox-slider::-webkit-slider-thumb { background: #f87171; }
+  input[type="range"].rate-slider::-webkit-slider-thumb { background: #a78bfa; }
+  .button-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  button {
+    flex: 1;
+    padding: 10px 16px;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    background: #1a1d27;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #242736; border-color: #3a3d4a; }
+  button.primary {
+    background: #4ade80;
+    color: #0f1117;
+    border-color: #4ade80;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #22c55e; border-color: #22c55e; }
+  button.danger {
+    background: #f87171;
+    color: #0f1117;
+    border-color: #f87171;
+    font-weight: 600;
+  }
+  button.danger:hover { background: #ef4444; border-color: #ef4444; }
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: #888;
+    padding: 8px 0 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<h1>Predator–Prey Simulation</h1>
+<p class="subtitle">Lotka-Volterra dynamics — rabbits & foxes</p>
+
+<div class="container">
+  <div class="card stats">
+    <div class="stat">
+      <div class="stat-value rabbit-color" id="rabbitCount">100</div>
+      <div class="stat-label">Rabbits</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value fox-color" id="foxCount">20</div>
+      <div class="stat-label">Foxes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value time-color" id="timeStep">0</div>
+      <div class="stat-label">Time</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <canvas id="graph"></canvas>
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#4ade80"></div>
+        Rabbits
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#f87171"></div>
+        Foxes
+      </div>
+    </div>
+  </div>
+
+  <div class="card controls">
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Rabbit breeding rate</span>
+        <span class="rabbit-color" id="alphaVal">0.10</span>
+      </div>
+      <input type="range" id="alpha" min="0.01" max="0.30" step="0.01" value="0.10">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Fox death rate</span>
+        <span class="fox-color" id="gammaVal">0.05</span>
+      </div>
+      <input type="range" class="fox-slider" id="gamma" min="0.01" max="0.20" step="0.01" value="0.05">
+    </div>
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Simulation speed</span>
+        <span class="time-color" id="speedVal">1×</span>
+      </div>
+      <input type="range" class="rate-slider" id="speed" min="1" max="10" step="1" value="1">
+    </div>
+    <div class="button-row">
+      <button class="primary" id="pauseBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+
+const alphaSlider = document.getElementById('alpha');
+const gammaSlider = document.getElementById('gamma');
+const speedSlider = document.getElementById('speed');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
+
+let alpha = 0.10;    // rabbit birth rate
+const beta = 0.002;  // predation rate
+const delta = 0.001; // fox reproduction per rabbit eaten
+let gamma = 0.05;    // fox death rate
+
+let rabbits = 100;
+let foxes = 20;
+let time = 0;
+let paused = false;
+
+const MAX_HISTORY = 600;
+let rabbitHistory = [rabbits];
+let foxHistory = [foxes];
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+}
+resize();
+window.addEventListener('resize', resize);
+
+function step() {
+  const dt = 0.5;
+  const dR = (alpha * rabbits - beta * rabbits * foxes) * dt;
+  const dF = (delta * rabbits * foxes - gamma * foxes) * dt;
+
+  rabbits = Math.max(0, rabbits + dR);
+  foxes = Math.max(0, foxes + dF);
+
+  if (rabbits < 0.5) rabbits = 0;
+  if (foxes < 0.5) foxes = 0;
+
+  time++;
+
+  rabbitHistory.push(rabbits);
+  foxHistory.push(foxes);
+  if (rabbitHistory.length > MAX_HISTORY) {
+    rabbitHistory.shift();
+    foxHistory.shift();
+  }
+}
+
+function drawGraph() {
+  const w = canvas.getBoundingClientRect().width;
+  const h = canvas.getBoundingClientRect().height;
+  ctx.clearRect(0, 0, w, h);
+
+  const len = rabbitHistory.length;
+  if (len < 2) return;
+
+  const allVals = rabbitHistory.concat(foxHistory);
+  const maxVal = Math.max(...allVals, 1);
+  const padTop = 16;
+  const padBottom = 8;
+  const graphH = h - padTop - padBottom;
+
+  // grid lines
+  ctx.strokeStyle = '#1e2030';
+  ctx.lineWidth = 1;
+  for (let i = 1; i <= 4; i++) {
+    const y = padTop + (graphH / 5) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  function drawLine(data, color) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < len; i++) {
+      const x = (i / (MAX_HISTORY - 1)) * w;
+      const y = padTop + graphH - (data[i] / maxVal) * graphH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // glow
+    ctx.globalAlpha = 0.08;
+    ctx.lineTo((len - 1) / (MAX_HISTORY - 1) * w, padTop + graphH);
+    ctx.lineTo(0, padTop + graphH);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  drawLine(rabbitHistory, '#4ade80');
+  drawLine(foxHistory, '#f87171');
+
+  // scale label
+  ctx.fillStyle = '#555';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(Math.round(maxVal).toLocaleString(), w - 6, padTop + 12);
+}
+
+function updateUI() {
+  document.getElementById('rabbitCount').textContent = Math.round(rabbits).toLocaleString();
+  document.getElementById('foxCount').textContent = Math.round(foxes).toLocaleString();
+  document.getElementById('timeStep').textContent = time.toLocaleString();
+}
+
+let lastFrame = 0;
+const TICK_INTERVAL = 50;
+
+function loop(ts) {
+  requestAnimationFrame(loop);
+  if (paused) { lastFrame = ts; return; }
+
+  const elapsed = ts - lastFrame;
+  const stepsPerFrame = parseInt(speedSlider.value);
+
+  if (elapsed >= TICK_INTERVAL) {
+    lastFrame = ts;
+    for (let i = 0; i < stepsPerFrame; i++) {
+      if (rabbits === 0 && foxes === 0) break;
+      step();
+    }
+    updateUI();
+    drawGraph();
+  }
+}
+
+alphaSlider.addEventListener('input', () => {
+  alpha = parseFloat(alphaSlider.value);
+  document.getElementById('alphaVal').textContent = alpha.toFixed(2);
+});
+
+gammaSlider.addEventListener('input', () => {
+  gamma = parseFloat(gammaSlider.value);
+  document.getElementById('gammaVal').textContent = gamma.toFixed(2);
+});
+
+speedSlider.addEventListener('input', () => {
+  document.getElementById('speedVal').textContent = speedSlider.value + '×';
+});
+
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+  pauseBtn.className = paused ? 'primary' : 'primary';
+});
+
+resetBtn.addEventListener('click', () => {
+  rabbits = 100;
+  foxes = 20;
+  time = 0;
+  rabbitHistory = [rabbits];
+  foxHistory = [foxes];
+  paused = false;
+  pauseBtn.textContent = 'Pause';
+  updateUI();
+  drawGraph();
+});
+
+updateUI();
+drawGraph();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

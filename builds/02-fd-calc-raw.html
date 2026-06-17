@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD Tracker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; }
+  h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 16px; }
+  .toolbar { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; }
+  button { padding: 8px 16px; border: 1px solid #d0d0d0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.85rem; font-family: inherit; }
+  button:hover { background: #f0f0f0; }
+  button.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  button.primary:hover { background: #333; }
+  button.danger { color: #c00; border-color: #c00; }
+  button.danger:hover { background: #fff0f0; }
+  .table-wrap { overflow-x: auto; background: #fff; border-radius: 8px; border: 1px solid #e0e0e0; }
+  table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  th { background: #fafafa; font-weight: 500; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: #666; padding: 10px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; white-space: nowrap; }
+  td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  input[type="text"], input[type="date"], input[type="number"] {
+    width: 100%; padding: 7px 8px; border: 1px solid #e0e0e0; border-radius: 4px;
+    font-size: 0.85rem; font-family: inherit; background: #fff;
+  }
+  input:focus { outline: none; border-color: #999; }
+  input[type="number"] { font-variant-numeric: tabular-nums; }
+  .computed { background: #f0faf0; font-weight: 500; font-size: 0.85rem; padding: 7px 8px; border-radius: 4px; min-height: 33px; display: flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .mode-toggle { display: flex; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; font-size: 0.75rem; }
+  .mode-toggle label { padding: 5px 8px; cursor: pointer; white-space: nowrap; user-select: none; }
+  .mode-toggle input { display: none; }
+  .mode-toggle input:checked + span { background: #1a1a1a; color: #fff; }
+  .mode-toggle span { display: block; padding: 5px 8px; }
+  .col-bank { min-width: 140px; }
+  .col-date { width: 130px; }
+  .col-num { width: 120px; }
+  .col-mode { width: 100px; }
+  .col-del { width: 40px; text-align: center; }
+  .del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 1.1rem; padding: 4px; }
+  .del-btn:hover { color: #c00; }
+  .summary { margin-top: 16px; display: flex; gap: 24px; flex-wrap: wrap; }
+  .summary-card { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px 20px; }
+  .summary-card .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #888; margin-bottom: 4px; }
+  .summary-card .value { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .empty-state { padding: 40px; text-align: center; color: #999; font-size: 0.9rem; }
+  .tenure { font-size: 0.75rem; color: #888; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<h1>Fixed Deposit Tracker</h1>
+<div class="toolbar">
+  <button class="primary" onclick="addRow()">+ Add FD</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="col-bank">Bank / Institution</th>
+        <th class="col-date">Opened</th>
+        <th class="col-date">Matures</th>
+        <th class="col-num">Invested (₹)</th>
+        <th class="col-mode">Mode</th>
+        <th class="col-num">Rate / Maturity</th>
+        <th class="col-num">Result</th>
+        <th class="col-num">Interest (₹)</th>
+        <th class="col-del"></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty-state" id="empty">No fixed deposits added yet.</div>
+</div>
+
+<div class="summary" id="summary"></div>
+
+<script>
+const STORAGE_KEY = 'fd_tracker_data';
+let rows = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
+}
+
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function fmtPct(n) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toFixed(2) + '%';
+}
+
+function tenureYears(d1, d2) {
+  const ms = new Date(d2) - new Date(d1);
+  return ms / (365.25 * 24 * 60 * 60 * 1000);
+}
+
+function tenureLabel(d1, d2) {
+  if (!d1 || !d2) return '';
+  const start = new Date(d1), end = new Date(d2);
+  const totalDays = Math.round((end - start) / (24 * 60 * 60 * 1000));
+  if (totalDays <= 0) return '';
+  const y = Math.floor(totalDays / 365);
+  const m = Math.floor((totalDays % 365) / 30);
+  const d = totalDays % 30;
+  const parts = [];
+  if (y) parts.push(y + 'y');
+  if (m) parts.push(m + 'm');
+  if (d && !y) parts.push(d + 'd');
+  return parts.join(' ') || totalDays + 'd';
+}
+
+// Quarterly compounding: A = P * (1 + r/400)^(4*t)
+function calcMaturity(principal, rate, years) {
+  return principal * Math.pow(1 + rate / 400, 4 * years);
+}
+
+function calcRate(principal, maturity, years) {
+  if (years <= 0 || principal <= 0) return NaN;
+  return 400 * (Math.pow(maturity / principal, 1 / (4 * years)) - 1);
+}
+
+function addRow(data) {
+  const row = data || { bank: '', opened: '', matures: '', principal: '', mode: 'rate', input: '' };
+  if (!data) {
+    rows.push(row);
+    save();
+  }
+  render();
+}
+
+function deleteRow(i) {
+  rows.splice(i, 1);
+  save();
+  render();
+}
+
+function update(i, field, value) {
+  rows[i][field] = value;
+  save();
+  render();
+}
+
+function render() {
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  empty.style.display = rows.length ? 'none' : 'block';
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const years = (r.opened && r.matures) ? tenureYears(r.opened, r.matures) : 0;
+    const P = parseFloat(r.principal) || 0;
+    const inp = parseFloat(r.input) || 0;
+    let result = '', interest = '', resultLabel = '', inputLabel = '';
+
+    if (r.mode === 'rate') {
+      inputLabel = 'Rate (%)';
+      resultLabel = 'Maturity';
+      if (P > 0 && inp > 0 && years > 0) {
+        const mat = calcMaturity(P, inp, years);
+        result = fmt(mat);
+        interest = fmt(mat - P);
+      }
+    } else {
+      inputLabel = 'Maturity (₹)';
+      resultLabel = 'Rate';
+      if (P > 0 && inp > 0 && years > 0) {
+        const rate = calcRate(P, inp, years);
+        result = fmtPct(rate);
+        interest = fmt(inp - P);
+      }
+    }
+
+    const tenure = tenureLabel(r.opened, r.matures);
+
+    return `<tr>
+      <td class="col-bank"><input type="text" value="${esc(r.bank)}" placeholder="e.g. SBI" onchange="update(${i},'bank',this.value)"></td>
+      <td class="col-date"><input type="date" value="${r.opened}" onchange="update(${i},'opened',this.value)"></td>
+      <td class="col-date">
+        <input type="date" value="${r.matures}" onchange="update(${i},'matures',this.value)">
+        ${tenure ? `<div class="tenure">${tenure}</div>` : ''}
+      </td>
+      <td class="col-num"><input type="number" value="${r.principal}" placeholder="0" min="0" onchange="update(${i},'principal',this.value)"></td>
+      <td class="col-mode">
+        <div class="mode-toggle">
+          <label><input type="radio" name="mode${i}" ${r.mode === 'rate' ? 'checked' : ''} onchange="update(${i},'mode','rate')"><span>Rate→₹</span></label>
+          <label><input type="radio" name="mode${i}" ${r.mode === 'amount' ? 'checked' : ''} onchange="update(${i},'mode','amount')"><span>₹→Rate</span></label>
+        </div>
+      </td>
+      <td class="col-num"><input type="number" value="${r.input}" placeholder="${r.mode === 'rate' ? '7.5' : '0'}" step="any" min="0" onchange="update(${i},'input',this.value)"></td>
+      <td class="col-num"><div class="computed">${result || '—'}</div></td>
+      <td class="col-num"><div class="computed">${interest || '—'}</div></td>
+      <td class="col-del"><button class="del-btn" onclick="deleteRow(${i})" title="Remove">×</button></td>
+    </tr>`;
+  }).join('');
+
+  renderSummary();
+}
+
+function renderSummary() {
+  const el = document.getElementById('summary');
+  if (!rows.length) { el.innerHTML = ''; return; }
+
+  let totalInvested = 0, totalMaturity = 0, count = 0;
+  rows.forEach(r => {
+    const P = parseFloat(r.principal) || 0;
+    const inp = parseFloat(r.input) || 0;
+    const years = (r.opened && r.matures) ? tenureYears(r.opened, r.matures) : 0;
+    if (P <= 0 || inp <= 0 || years <= 0) return;
+    count++;
+    totalInvested += P;
+    if (r.mode === 'rate') {
+      totalMaturity += calcMaturity(P, inp, years);
+    } else {
+      totalMaturity += inp;
+    }
+  });
+
+  if (!count) { el.innerHTML = ''; return; }
+  const totalInterest = totalMaturity - totalInvested;
+
+  el.innerHTML = `
+    <div class="summary-card"><div class="label">Total Invested</div><div class="value">${fmt(totalInvested)}</div></div>
+    <div class="summary-card"><div class="label">Total Maturity</div><div class="value">${fmt(totalMaturity)}</div></div>
+    <div class="summary-card"><div class="label">Total Interest</div><div class="value">${fmt(totalInterest)}</div></div>
+    <div class="summary-card"><div class="label">FDs Tracked</div><div class="value">${count}</div></div>
+  `;
+}
+
+function esc(s) {
+  return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+render();
+</script>
+</body>
+</html>

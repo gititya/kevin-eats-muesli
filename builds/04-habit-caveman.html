@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Habits</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --green-1: #0e4429;
+    --green-2: #006d32;
+    --green-3: #26a641;
+    --green-4: #39d353;
+    --accent: #58a6ff;
+    --danger: #f85149;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+
+  .today-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .today-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .today-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .today-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .habit-check {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .habit-check:last-child { border-bottom: none; }
+
+  .habit-check input[type="checkbox"] {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s;
+  }
+
+  .habit-check input[type="checkbox"]:checked {
+    background: var(--green-3);
+    border-color: var(--green-3);
+  }
+
+  .habit-check input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .habit-name {
+    flex: 1;
+    font-size: 0.95rem;
+  }
+
+  .streak-badge {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--bg);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .streak-badge.active {
+    color: var(--green-4);
+  }
+
+  .delete-habit {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .habit-check:hover .delete-habit { opacity: 1; }
+  .delete-habit:hover { color: var(--danger); }
+
+  .add-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .add-form input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+  }
+
+  .add-form input:focus { border-color: var(--accent); }
+
+  .add-form button {
+    background: var(--green-3);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .add-form button:hover { background: var(--green-4); }
+
+  .no-habits {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1rem 0;
+  }
+
+  .heatmaps { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .heatmap-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem;
+  }
+
+  .heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .heatmap-header h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .heatmap-streak {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .heatmap-grid {
+    display: flex;
+    gap: 3px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .heatmap-week {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .heatmap-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--bg);
+  }
+
+  .heatmap-cell.level-1 { background: var(--green-1); }
+  .heatmap-cell.level-2 { background: var(--green-2); }
+  .heatmap-cell.level-3 { background: var(--green-3); }
+  .heatmap-cell.level-4 { background: var(--green-4); }
+  .heatmap-cell.future { background: transparent; border: 1px solid var(--border); opacity: 0.3; }
+
+  .heatmap-cell[title] { cursor: default; }
+
+  .month-labels {
+    display: flex;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    padding-left: 0;
+  }
+
+  .month-label {
+    position: absolute;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .heatmap-months {
+    position: relative;
+    height: 16px;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 0.75rem;
+    justify-content: flex-end;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .legend-cell {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  .streak-rule {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.75rem;
+    line-height: 1.4;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Habits</h1>
+
+<div class="today-section">
+  <div class="today-header">
+    <h2>Today</h2>
+    <span class="today-date" id="todayDate"></span>
+  </div>
+  <div id="todayList"></div>
+  <div class="add-form">
+    <input type="text" id="newHabit" placeholder="New habit…" autocomplete="off">
+    <button onclick="addHabit()">Add</button>
+  </div>
+  <div class="streak-rule">
+    Miss a whole day → streaks safe. Skip a habit on an active day → that streak resets.
+  </div>
+</div>
+
+<div class="heatmaps" id="heatmaps"></div>
+
+<script>
+const STORE_KEY = 'habits_v1';
+const DAYS = 365;
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function load() {
+  try {
+    return JSON.parse(localStorage.getItem(STORE_KEY)) || { habits: [], log: {} };
+  } catch {
+    return { habits: [], log: {} };
+  }
+}
+
+function save(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function dateStr(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function addHabit() {
+  var input = document.getElementById('newHabit');
+  var name = input.value.trim();
+  if (!name) return;
+
+  var data = load();
+  if (data.habits.includes(name)) {
+    input.value = '';
+    return;
+  }
+  data.habits.push(name);
+  save(data);
+  input.value = '';
+  render();
+}
+
+function removeHabit(name) {
+  var data = load();
+  data.habits = data.habits.filter(function(h) { return h !== name; });
+  save(data);
+  render();
+}
+
+function toggleHabit(name) {
+  var data = load();
+  var d = today();
+  if (!data.log[d]) data.log[d] = [];
+
+  var idx = data.log[d].indexOf(name);
+  if (idx === -1) {
+    data.log[d].push(name);
+  } else {
+    data.log[d].splice(idx, 1);
+  }
+  if (data.log[d].length === 0) delete data.log[d];
+  save(data);
+  render();
+}
+
+function calcStreak(habitName, data) {
+  var streak = 0;
+  var d = new Date();
+  d.setHours(0, 0, 0, 0);
+
+  var todayStr = dateStr(d);
+  var todayLog = data.log[todayStr];
+  var todayIsActive = todayLog && todayLog.length > 0;
+
+  if (todayIsActive) {
+    if (todayLog.includes(habitName)) {
+      streak = 1;
+    } else {
+      return 0;
+    }
+  }
+
+  d.setDate(d.getDate() - 1);
+
+  for (var i = 0; i < DAYS; i++) {
+    var ds = dateStr(d);
+    var dayLog = data.log[ds];
+
+    if (!dayLog || dayLog.length === 0) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+
+    if (dayLog.includes(habitName)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+function render() {
+  var data = load();
+  var d = today();
+
+  var todayDate = document.getElementById('todayDate');
+  var now = new Date();
+  todayDate.textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'short', day: 'numeric'
+  });
+
+  var list = document.getElementById('todayList');
+  if (data.habits.length === 0) {
+    list.innerHTML = '<div class="no-habits">Add your first habit below</div>';
+  } else {
+    list.innerHTML = data.habits.map(function(h) {
+      var checked = data.log[d] && data.log[d].includes(h);
+      var streak = calcStreak(h, data);
+      var streakClass = streak > 0 ? 'active' : '';
+      var streakText = streak > 0 ? streak + 'd streak' : 'no streak';
+      return '<div class="habit-check">' +
+        '<input type="checkbox" ' + (checked ? 'checked' : '') +
+        ' onchange="toggleHabit(\'' + h.replace(/'/g, "\\'") + '\')">' +
+        '<span class="habit-name">' + esc(h) + '</span>' +
+        '<span class="streak-badge ' + streakClass + '">' + streakText + '</span>' +
+        '<button class="delete-habit" onclick="removeHabit(\'' + h.replace(/'/g, "\\'") + '\')" title="Remove">×</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  renderHeatmaps(data);
+}
+
+function esc(s) {
+  var el = document.createElement('span');
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+function renderHeatmaps(data) {
+  var container = document.getElementById('heatmaps');
+  if (data.habits.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = data.habits.map(function(habit) {
+    var streak = calcStreak(habit, data);
+    var streakText = streak > 0 ? streak + ' day streak' : 'No active streak';
+
+    var end = new Date();
+    end.setHours(0, 0, 0, 0);
+    var todayDay = end.getDay();
+
+    var totalDays = DAYS + todayDay;
+    var start = new Date(end);
+    start.setDate(start.getDate() - totalDays + 1);
+
+    var weeks = [];
+    var currentWeek = [];
+    var cursor = new Date(start);
+
+    while (cursor <= end) {
+      var ds = dateStr(cursor);
+      var dayLog = data.log[ds];
+      var level = 0;
+
+      if (dayLog && dayLog.includes(habit)) {
+        level = 4;
+      } else if (dayLog && dayLog.length > 0) {
+        level = 0;
+      }
+
+      var dayName = cursor.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      currentWeek.push({ level: level, date: ds, label: dayName, done: level > 0 });
+
+      if (cursor.getDay() === 6) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) {
+        currentWeek.push({ level: -1, date: '', label: '', future: true });
+      }
+      weeks.push(currentWeek);
+    }
+
+    var monthPositions = [];
+    var lastMonth = -1;
+    weeks.forEach(function(week, wi) {
+      var firstDay = week.find(function(d) { return d.date; });
+      if (firstDay) {
+        var m = new Date(firstDay.date).getMonth();
+        if (m !== lastMonth) {
+          monthPositions.push({ month: m, pos: wi });
+          lastMonth = m;
+        }
+      }
+    });
+
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    var monthLabelsHtml = '<div class="heatmap-months">' +
+      monthPositions.map(function(mp) {
+        return '<span class="month-label" style="left:' + (mp.pos * 15) + 'px">' + monthNames[mp.month] + '</span>';
+      }).join('') + '</div>';
+
+    var gridHtml = weeks.map(function(week) {
+      return '<div class="heatmap-week">' +
+        week.map(function(day) {
+          if (day.future) return '<div class="heatmap-cell future"></div>';
+          var cls = day.level > 0 ? ' level-' + day.level : '';
+          var title = day.label + (day.done ? ' ✓' : '');
+          return '<div class="heatmap-cell' + cls + '" title="' + esc(title) + '"></div>';
+        }).join('') + '</div>';
+    }).join('');
+
+    return '<div class="heatmap-card">' +
+      '<div class="heatmap-header">' +
+        '<h3>' + esc(habit) + '</h3>' +
+        '<span class="heatmap-streak">' + streakText + '</span>' +
+      '</div>' +
+      monthLabelsHtml +
+      '<div class="heatmap-grid">' + gridHtml + '</div>' +
+      '<div class="legend">' +
+        '<span>Less</span>' +
+        '<div class="legend-cell heatmap-cell"></div>' +
+        '<div class="legend-cell heatmap-cell level-4"></div>' +
+        '<span>More</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+document.getElementById('newHabit').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') addHabit();
+});
+
+render();
+</script>
+</body>
+</html>

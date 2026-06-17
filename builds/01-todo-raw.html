@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>todo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0c0b;
+    color: #ede8e1;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 80px 24px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  h1 {
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8c877f;
+    margin-bottom: 32px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+
+  .input-row input {
+    flex: 1;
+    background: #1a1815;
+    border: 1px solid #242220;
+    border-radius: 4px;
+    padding: 10px 14px;
+    color: #ede8e1;
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-row input::placeholder { color: #4a4740; }
+  .input-row input:focus { border-color: #4a4740; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #4a4740;
+    margin-bottom: 12px;
+  }
+
+  .todo-list {
+    list-style: none;
+    margin-bottom: 48px;
+    min-height: 24px;
+  }
+
+  .todo-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #1a1815;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .todo-item:hover { background: #131210; margin: 0 -8px; padding: 10px 8px; border-radius: 4px; }
+
+  .check {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid #4a4740;
+    border-radius: 3px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .todo-item:hover .check { border-color: #8c877f; }
+
+  .check svg { opacity: 0; transition: opacity 0.15s; }
+  .todo-item.done .check { border-color: #4a4740; background: #1a1815; }
+  .todo-item.done .check svg { opacity: 1; }
+
+  .todo-text {
+    flex: 1;
+    transition: all 0.15s;
+  }
+
+  .todo-item.done .todo-text {
+    text-decoration: line-through;
+    color: #4a4740;
+  }
+
+  .delete-btn {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: #4a4740;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.15s;
+  }
+
+  .todo-item:hover .delete-btn { opacity: 1; }
+  .delete-btn:hover { color: #8c877f; }
+
+  .empty {
+    color: #2e2c29;
+    font-style: italic;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>todo</h1>
+
+  <div class="input-row">
+    <input type="text" id="input" placeholder="add something..." autofocus>
+  </div>
+
+  <div class="section-label">to do</div>
+  <ul class="todo-list" id="pending"></ul>
+
+  <div class="section-label">completed</div>
+  <ul class="todo-list" id="completed"></ul>
+</div>
+
+<script>
+  const STORAGE_KEY = 'todo-items'
+  const input = document.getElementById('input')
+  const pendingList = document.getElementById('pending')
+  const completedList = document.getElementById('completed')
+
+  let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  }
+
+  function render() {
+    const pending = items.filter(i => !i.done)
+    const done = items.filter(i => i.done)
+
+    pendingList.innerHTML = pending.length
+      ? pending.map(i => itemHTML(i)).join('')
+      : '<li class="empty">nothing here</li>'
+
+    completedList.innerHTML = done.length
+      ? done.map(i => itemHTML(i)).join('')
+      : '<li class="empty">nothing yet</li>'
+  }
+
+  function itemHTML(item) {
+    return `<li class="todo-item ${item.done ? 'done' : ''}" data-id="${item.id}">
+      <div class="check" onclick="toggle('${item.id}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <span class="todo-text" onclick="toggle('${item.id}')">${esc(item.text)}</span>
+      <button class="delete-btn" onclick="remove('${item.id}')" title="delete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </li>`
+  }
+
+  function esc(str) {
+    const d = document.createElement('div')
+    d.textContent = str
+    return d.innerHTML
+  }
+
+  function addItem(text) {
+    if (!text.trim()) return
+    items.unshift({ id: crypto.randomUUID(), text: text.trim(), done: false })
+    save()
+    render()
+  }
+
+  function toggle(id) {
+    const item = items.find(i => i.id === id)
+    if (item) item.done = !item.done
+    save()
+    render()
+  }
+
+  function remove(id) {
+    items = items.filter(i => i.id !== id)
+    save()
+    render()
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      addItem(input.value)
+      input.value = ''
+    }
+  })
+
+  render()
+</script>
+
+</body>
+</html>

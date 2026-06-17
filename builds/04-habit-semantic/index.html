@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habit Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Habits</h1>
+      <div class="add-habit">
+        <input type="text" id="new-habit" placeholder="New habit…" maxlength="30">
+        <button id="add-btn">Add</button>
+      </div>
+    </header>
+
+    <section class="today-section">
+      <h2 id="today-label"></h2>
+      <ul id="habit-list"></ul>
+    </section>
+
+    <section class="streaks-section">
+      <h2>Streaks</h2>
+      <div id="streaks"></div>
+    </section>
+
+    <section class="heatmap-section">
+      <h2>Activity</h2>
+      <div class="heatmap-legend">
+        <span>Less</span>
+        <span class="swatch level-0"></span>
+        <span class="swatch level-1"></span>
+        <span class="swatch level-2"></span>
+        <span class="swatch level-3"></span>
+        <span class="swatch level-4"></span>
+        <span>More</span>
+      </div>
+      <div class="heatmap-wrapper">
+        <div class="day-labels">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+        </div>
+        <div class="heatmap-scroll">
+          <div id="month-labels" class="month-labels"></div>
+          <div id="heatmap" class="heatmap-grid"></div>
+        </div>
+      </div>
+      <div id="tooltip" class="tooltip"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

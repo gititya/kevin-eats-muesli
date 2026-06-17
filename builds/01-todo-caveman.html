@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>todo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-0: #0d0c0b;
+    --bg-1: #131210;
+    --bg-2: #1a1815;
+    --bg-3: #242220;
+    --text-primary: #ede8e1;
+    --text-secondary: #8c877f;
+    --text-tertiary: #4a4740;
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-mid: rgba(255,255,255,0.10);
+    --accent: #8c877f;
+    --accent-dim: rgba(140,135,127,0.10);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-0);
+    color: var(--text-primary);
+    font-weight: 300;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+
+  .input-row input {
+    flex: 1;
+    background: var(--bg-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    outline: none;
+    transition: border-color 120ms ease;
+  }
+
+  .input-row input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .input-row input:focus {
+    border-color: var(--border-mid);
+  }
+
+  .input-row button {
+    background: var(--bg-2);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 120ms ease;
+    white-space: nowrap;
+  }
+
+  .input-row button:hover {
+    background: var(--bg-3);
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+  }
+
+  .task-list {
+    list-style: none;
+    margin-bottom: 32px;
+  }
+
+  .task-list:empty + .section-label,
+  .task-list:empty {
+    display: none;
+  }
+
+  .task-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-1);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 120ms ease;
+    user-select: none;
+  }
+
+  .task-item:hover {
+    background: var(--bg-2);
+  }
+
+  .task-item .check {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1.5px solid var(--text-tertiary);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+
+  .task-item:hover .check {
+    border-color: var(--text-secondary);
+  }
+
+  .task-item.done .check {
+    border-color: var(--text-tertiary);
+    background: var(--text-tertiary);
+  }
+
+  .task-item.done .check svg {
+    opacity: 1;
+  }
+
+  .task-item .check svg {
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    stroke: var(--bg-0);
+    stroke-width: 2.5;
+    fill: none;
+  }
+
+  .task-item .text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .task-item.done .text {
+    color: var(--text-tertiary);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-tertiary);
+  }
+
+  .task-item .delete {
+    opacity: 0;
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 16px;
+    line-height: 1;
+    transition: opacity 120ms ease, color 120ms ease;
+  }
+
+  .task-item:hover .delete {
+    opacity: 1;
+  }
+
+  .task-item .delete:hover {
+    color: var(--text-secondary);
+  }
+
+  .empty-state {
+    color: var(--text-tertiary);
+    font-size: 14px;
+    padding: 24px 0;
+    text-align: center;
+  }
+
+  #completed-section {
+    margin-top: 8px;
+  }
+
+  #completed-section .task-item {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  #completed-section .task-item:hover {
+    background: var(--bg-1);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>tasks</h1>
+
+  <div class="input-row">
+    <input type="text" id="input" placeholder="add a task" autofocus>
+    <button id="add-btn">add</button>
+  </div>
+
+  <ul class="task-list" id="tasks"></ul>
+
+  <div id="completed-section" style="display:none">
+    <div class="section-label">completed</div>
+    <ul class="task-list" id="completed"></ul>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'todo-caveman';
+  const input = document.getElementById('input');
+  const addBtn = document.getElementById('add-btn');
+  const tasksList = document.getElementById('tasks');
+  const completedList = document.getElementById('completed');
+  const completedSection = document.getElementById('completed-section');
+
+  let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+
+  function render() {
+    const active = tasks.filter(t => !t.done);
+    const done = tasks.filter(t => t.done);
+
+    tasksList.innerHTML = active.length
+      ? active.map(t => taskHTML(t)).join('')
+      : '<li class="empty-state">nothing here yet</li>';
+
+    completedSection.style.display = done.length ? '' : 'none';
+    completedList.innerHTML = done.map(t => taskHTML(t)).join('');
+  }
+
+  function taskHTML(t) {
+    return `<li class="task-item ${t.done ? 'done' : ''}" data-id="${t.id}">
+      <div class="check" data-action="toggle">
+        <svg viewBox="0 0 12 12"><polyline points="2.5 6 5 8.5 9.5 3.5"/></svg>
+      </div>
+      <span class="text">${escapeHTML(t.text)}</span>
+      <button class="delete" data-action="delete">&times;</button>
+    </li>`;
+  }
+
+  function escapeHTML(str) {
+    const el = document.createElement('span');
+    el.textContent = str;
+    return el.innerHTML;
+  }
+
+  function addTask() {
+    const text = input.value.trim();
+    if (!text) return;
+    tasks.push({ id: Date.now(), text, done: false });
+    input.value = '';
+    save();
+    render();
+    input.focus();
+  }
+
+  addBtn.addEventListener('click', addTask);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTask();
+  });
+
+  document.addEventListener('click', e => {
+    const item = e.target.closest('.task-item');
+    if (!item) return;
+    const id = Number(item.dataset.id);
+    const action = e.target.closest('[data-action]');
+
+    if (action?.dataset.action === 'delete') {
+      tasks = tasks.filter(t => t.id !== id);
+    } else {
+      const task = tasks.find(t => t.id === id);
+      if (task) task.done = !task.done;
+    }
+    save();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

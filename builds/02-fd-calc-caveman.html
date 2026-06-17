@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FD Calculator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; padding: 24px; max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 24px; }
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+  .field input, .field select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; background: #fff; }
+  .field input:focus, .field select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.15); }
+  .field input.computed { background: #e8f5e9; border-color: #66bb6a; font-weight: 600; }
+  .mode-toggle { display: flex; gap: 0; margin-bottom: 16px; }
+  .mode-toggle button { padding: 8px 16px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 500; }
+  .mode-toggle button:first-child { border-radius: 6px 0 0 6px; }
+  .mode-toggle button:last-child { border-radius: 0 6px 6px 0; border-left: none; }
+  .mode-toggle button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button.add { padding: 8px 20px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; }
+  button.add:hover { background: #1d4ed8; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  th { background: #f8f9fa; text-align: left; padding: 10px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #e5e7eb; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 0.875rem; }
+  tr:last-child td { border-bottom: none; }
+  .computed-cell { color: #2e7d32; font-weight: 600; }
+  .actions button { background: none; border: none; cursor: pointer; color: #999; font-size: 1rem; padding: 2px 6px; }
+  .actions button:hover { color: #e53935; }
+  .empty { text-align: center; padding: 40px; color: #999; }
+  .duration { color: #888; font-size: 0.8rem; }
+  .totals { margin-top: 16px; padding: 16px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; gap: 32px; }
+  .totals .stat { display: flex; flex-direction: column; gap: 2px; }
+  .totals .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; }
+  .totals .stat-value { font-size: 1.1rem; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<h1>Fixed Deposit Tracker</h1>
+
+<div class="mode-toggle">
+  <button class="active" onclick="setMode('return')">Enter Return → Calc %</button>
+  <button onclick="setMode('rate')">Enter Rate % → Calc Return</button>
+</div>
+
+<div class="form-row">
+  <div class="field">
+    <label>Bank</label>
+    <input type="text" id="bank" placeholder="Bank name">
+  </div>
+  <div class="field">
+    <label>Opened</label>
+    <input type="date" id="opened">
+  </div>
+  <div class="field">
+    <label>Closed</label>
+    <input type="date" id="closed">
+  </div>
+  <div class="field">
+    <label>Investment ₹</label>
+    <input type="number" id="investment" placeholder="Amount" min="0">
+  </div>
+  <div class="field" id="return-field">
+    <label>Return ₹</label>
+    <input type="number" id="returnAmt" placeholder="Maturity amount" min="0">
+  </div>
+  <div class="field" id="rate-field" style="display:none">
+    <label>Rate % (annual)</label>
+    <input type="number" id="rate" placeholder="e.g. 7.5" step="0.01" min="0">
+  </div>
+  <button class="add" onclick="addFD()">Add</button>
+</div>
+
+<table id="fd-table">
+  <thead>
+    <tr>
+      <th>Bank</th>
+      <th>Opened</th>
+      <th>Closed</th>
+      <th>Duration</th>
+      <th>Invested</th>
+      <th>Return</th>
+      <th>Rate %</th>
+      <th>Interest</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="fd-body">
+    <tr><td colspan="9" class="empty">No deposits added yet</td></tr>
+  </tbody>
+</table>
+
+<div class="totals" id="totals" style="display:none">
+  <div class="stat">
+    <span class="stat-label">Total Invested</span>
+    <span class="stat-value" id="total-invested">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Total Returns</span>
+    <span class="stat-value" id="total-returns">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Total Interest</span>
+    <span class="stat-value" id="total-interest">—</span>
+  </div>
+</div>
+
+<script>
+var deposits = JSON.parse(localStorage.getItem('fd-deposits') || '[]');
+var mode = 'return';
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-toggle button').forEach(function(b, i) {
+    b.classList.toggle('active', (i === 0 && m === 'return') || (i === 1 && m === 'rate'));
+  });
+  document.getElementById('return-field').style.display = m === 'return' ? '' : 'none';
+  document.getElementById('rate-field').style.display = m === 'rate' ? '' : 'none';
+}
+
+function durationYears(opened, closed) {
+  var ms = new Date(closed) - new Date(opened);
+  return ms / (365.25 * 24 * 60 * 60 * 1000);
+}
+
+function formatDuration(opened, closed) {
+  var d1 = new Date(opened), d2 = new Date(closed);
+  var months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+  var days = d2.getDate() - d1.getDate();
+  if (days < 0) { months--; days += new Date(d2.getFullYear(), d2.getMonth(), 0).getDate(); }
+  var y = Math.floor(months / 12), m = months % 12;
+  var parts = [];
+  if (y) parts.push(y + 'y');
+  if (m) parts.push(m + 'm');
+  if (days) parts.push(days + 'd');
+  return parts.join(' ') || '0d';
+}
+
+function calcRate(principal, returnAmt, years) {
+  if (years <= 0 || principal <= 0) return 0;
+  return (Math.pow(returnAmt / principal, 1 / years) - 1) * 100;
+}
+
+function calcReturn(principal, rate, years) {
+  return principal * Math.pow(1 + rate / 100, years);
+}
+
+function fmt(n) {
+  return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function addFD() {
+  var bank = document.getElementById('bank').value.trim();
+  var opened = document.getElementById('opened').value;
+  var closed = document.getElementById('closed').value;
+  var investment = parseFloat(document.getElementById('investment').value);
+
+  if (!bank || !opened || !closed || !investment) return;
+
+  var years = durationYears(opened, closed);
+  var returnAmt, rate;
+
+  if (mode === 'return') {
+    returnAmt = parseFloat(document.getElementById('returnAmt').value);
+    if (!returnAmt) return;
+    rate = calcRate(investment, returnAmt, years);
+  } else {
+    rate = parseFloat(document.getElementById('rate').value);
+    if (isNaN(rate)) return;
+    returnAmt = calcReturn(investment, rate, years);
+  }
+
+  deposits.push({ bank: bank, opened: opened, closed: closed, investment: investment, returnAmt: returnAmt, rate: rate, computed: mode === 'return' ? 'rate' : 'return' });
+  save();
+  render();
+  clearForm();
+}
+
+function removeFD(i) {
+  deposits.splice(i, 1);
+  save();
+  render();
+}
+
+function save() {
+  localStorage.setItem('fd-deposits', JSON.stringify(deposits));
+}
+
+function clearForm() {
+  ['bank', 'opened', 'closed', 'investment', 'returnAmt', 'rate'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+}
+
+function render() {
+  var tbody = document.getElementById('fd-body');
+  if (!deposits.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No deposits added yet</td></tr>';
+    document.getElementById('totals').style.display = 'none';
+    return;
+  }
+
+  var totalInv = 0, totalRet = 0;
+  var rows = deposits.map(function(d, i) {
+    var interest = d.returnAmt - d.investment;
+    totalInv += d.investment;
+    totalRet += d.returnAmt;
+    var retClass = d.computed === 'return' ? ' class="computed-cell"' : '';
+    var rateClass = d.computed === 'rate' ? ' class="computed-cell"' : '';
+    return '<tr>' +
+      '<td>' + d.bank + '</td>' +
+      '<td>' + d.opened + '</td>' +
+      '<td>' + d.closed + '</td>' +
+      '<td class="duration">' + formatDuration(d.opened, d.closed) + '</td>' +
+      '<td>' + fmt(d.investment) + '</td>' +
+      '<td' + retClass + '>' + fmt(d.returnAmt) + '</td>' +
+      '<td' + rateClass + '>' + d.rate.toFixed(2) + '%</td>' +
+      '<td>' + fmt(interest) + '</td>' +
+      '<td class="actions"><button onclick="removeFD(' + i + ')">×</button></td>' +
+      '</tr>';
+  });
+  tbody.innerHTML = rows.join('');
+
+  document.getElementById('totals').style.display = '';
+  document.getElementById('total-invested').textContent = fmt(totalInv);
+  document.getElementById('total-returns').textContent = fmt(totalRet);
+  document.getElementById('total-interest').textContent = fmt(totalRet - totalInv);
+}
+
+render();
+</script>
+</body>
+</html>

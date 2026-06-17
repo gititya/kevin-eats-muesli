@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predator–Prey</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a0f;
+    color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 0.02em;
+  }
+  .controls {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .slider-group label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+  .slider-group .value {
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+    color: #ccc;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 160px;
+    height: 4px;
+    border-radius: 2px;
+    background: #333;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6cf;
+    cursor: pointer;
+  }
+  button {
+    padding: 8px 20px;
+    border: 1px solid #444;
+    border-radius: 6px;
+    background: #1a1a24;
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: #2a2a34; }
+  button.active { border-color: #6cf; color: #6cf; }
+  canvas {
+    border: 1px solid #222;
+    border-radius: 8px;
+    background: #0d0d14;
+  }
+  .legend {
+    display: flex;
+    gap: 24px;
+    margin-top: 12px;
+    font-size: 0.8rem;
+  }
+  .legend span::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .legend .rabbits::before { background: #5b5; }
+  .legend .foxes::before { background: #e55; }
+  .stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats .r { color: #5b5; }
+  .stats .f { color: #e55; }
+</style>
+</head>
+<body>
+
+<h1>Predator–Prey Simulation</h1>
+
+<div class="controls">
+  <div class="slider-group">
+    <label>Rabbit Breed Rate</label>
+    <input type="range" id="rabbitRate" min="0.01" max="0.15" step="0.005" value="0.06">
+    <span class="value" id="rabbitRateVal">0.060</span>
+  </div>
+  <div class="slider-group">
+    <label>Fox Hunt Rate</label>
+    <input type="range" id="foxRate" min="0.001" max="0.006" step="0.0005" value="0.003">
+    <span class="value" id="foxRateVal">0.0030</span>
+  </div>
+  <div class="slider-group">
+    <label>Fox Death Rate</label>
+    <input type="range" id="foxDeath" min="0.02" max="0.12" step="0.005" value="0.06">
+    <span class="value" id="foxDeathVal">0.060</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button id="pauseBtn">Pause</button>
+    <button id="resetBtn">Reset</button>
+  </div>
+</div>
+
+<canvas id="graph" width="800" height="360"></canvas>
+
+<div class="legend">
+  <span class="rabbits">Rabbits</span>
+  <span class="foxes">Foxes</span>
+</div>
+<div class="stats">
+  <span class="r" id="rCount">Rabbits: 0</span>
+  <span class="f" id="fCount">Foxes: 0</span>
+</div>
+
+<script>
+const canvas = document.getElementById('graph');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const sliders = {
+  rabbitRate: document.getElementById('rabbitRate'),
+  foxRate: document.getElementById('foxRate'),
+  foxDeath: document.getElementById('foxDeath'),
+};
+const vals = {
+  rabbitRate: document.getElementById('rabbitRateVal'),
+  foxRate: document.getElementById('foxRateVal'),
+  foxDeath: document.getElementById('foxDeathVal'),
+};
+
+let paused = false;
+let rabbits, foxes, history, tick;
+
+function init() {
+  rabbits = 80;
+  foxes = 30;
+  history = [];
+  tick = 0;
+}
+init();
+
+for (const key of Object.keys(sliders)) {
+  sliders[key].addEventListener('input', () => {
+    vals[key].textContent = parseFloat(sliders[key].value).toFixed(key === 'foxRate' ? 4 : 3);
+  });
+}
+
+document.getElementById('pauseBtn').addEventListener('click', function() {
+  paused = !paused;
+  this.textContent = paused ? 'Resume' : 'Pause';
+  this.classList.toggle('active', paused);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  init();
+  paused = false;
+  document.getElementById('pauseBtn').textContent = 'Pause';
+  document.getElementById('pauseBtn').classList.remove('active');
+});
+
+function step() {
+  const a = parseFloat(sliders.rabbitRate.value);
+  const b = parseFloat(sliders.foxRate.value);
+  const c = b * 0.4;
+  const d = parseFloat(sliders.foxDeath.value);
+
+  // Lotka-Volterra with RK4 for stability
+  function dR(r, f) { return a * r - b * r * f; }
+  function dF(r, f) { return c * r * f - d * f; }
+
+  const dt = 1;
+  const k1r = dR(rabbits, foxes);
+  const k1f = dF(rabbits, foxes);
+  const k2r = dR(rabbits + 0.5*dt*k1r, foxes + 0.5*dt*k1f);
+  const k2f = dF(rabbits + 0.5*dt*k1r, foxes + 0.5*dt*k1f);
+  const k3r = dR(rabbits + 0.5*dt*k2r, foxes + 0.5*dt*k2f);
+  const k3f = dF(rabbits + 0.5*dt*k2r, foxes + 0.5*dt*k2f);
+  const k4r = dR(rabbits + dt*k3r, foxes + dt*k3f);
+  const k4f = dF(rabbits + dt*k3r, foxes + dt*k3f);
+
+  rabbits += (dt/6) * (k1r + 2*k2r + 2*k3r + k4r);
+  foxes += (dt/6) * (k1f + 2*k2f + 2*k3f + k4f);
+
+  rabbits = Math.max(0, rabbits);
+  foxes = Math.max(0, foxes);
+
+  history.push({ r: rabbits, f: foxes });
+
+  const maxVisible = W - 60;
+  if (history.length > maxVisible) {
+    history = history.slice(history.length - maxVisible);
+  }
+
+  tick++;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  if (history.length < 2) return;
+
+  let maxPop = 10;
+  for (const h of history) {
+    if (h.r > maxPop) maxPop = h.r;
+    if (h.f > maxPop) maxPop = h.f;
+  }
+  maxPop = Math.ceil(maxPop / 10) * 10;
+
+  const pad = { l: 50, r: 10, t: 20, b: 30 };
+  const gw = W - pad.l - pad.r;
+  const gh = H - pad.t - pad.b;
+
+  // grid
+  ctx.strokeStyle = '#1a1a24';
+  ctx.lineWidth = 1;
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = pad.t + (gh / gridLines) * i;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(W - pad.r, y);
+    ctx.stroke();
+
+    ctx.fillStyle = '#555';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxPop * (1 - i / gridLines)), pad.l - 8, y + 4);
+  }
+
+  function plotLine(color, key) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const xStep = gw / Math.max(1, history.length - 1);
+    for (let i = 0; i < history.length; i++) {
+      const x = pad.l + i * xStep;
+      const y = pad.t + gh - (history[i][key] / maxPop) * gh;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  plotLine('#5b5', 'r');
+  plotLine('#e55', 'f');
+
+  document.getElementById('rCount').textContent = `Rabbits: ${Math.round(rabbits)}`;
+  document.getElementById('fCount').textContent = `Foxes: ${Math.round(foxes)}`;
+}
+
+function loop() {
+  if (!paused) {
+    step();
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
