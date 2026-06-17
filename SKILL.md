@@ -46,7 +46,13 @@ STT compression A/B experiment. Tests whether compressing a Muesli dictation tra
 - Key finding: compression safe when omitted detail is recoverable from a named domain model
 
 ## Current phase
-Pass 1 — Sonnet. All 5 ideas complete. Awaiting final analysis.
+Pass 1 — Sonnet. All 5 ideas complete. Final analysis done.
+
+## Pass 1 Verdict
+- **Semantic → USE SELECTIVELY.** Safe for simple/standard-domain; unsafe for custom bespoke logic.
+- **Caveman → DROP IT.** 2/5 failures, avg quality 2.8, only XSS, only 0/5 UX rating.
+- Instruction token savings (75-80%) do NOT reliably lower total cost — cache + output dominate.
+- The central risk is silent constraint drift: polished apps that confidently implement wrong logic.
 
 ## How to resume
 1. Check `runs.jsonl` to see which ideas are done (filter by `coding_model` + `arm`)
