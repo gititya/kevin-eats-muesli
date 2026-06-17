@@ -29,8 +29,17 @@ STT compression A/B experiment. Tests whether compressing a Muesli dictation tra
 - Caveman: $0.173, 226 lines — cheapest but undiscoverable, technically works but UX zero, score 1
 - Key finding: caveman preserves feature list but drops framing/intent cues → UX failure mode
 
+## Idea 4 results (04-habit) — INFLECTION POINT
+- Grace-day rule: Raw=correct, Semantic=loosened, Caveman=absent
+- Compression error surfaces as silent constraint drift — model ships wrong-but-consistent behavior
+- Raw: $1.04 (!), 956 lines, score 5 — only arm with correct grace logic
+- Semantic: $0.378, 625 lines, score 4 — grace loosened per compressed prompt
+- Caveman: $0.239, 544 lines, score 3 — grace entirely absent
+- Key finding: cost-per-correct-constraint, not cost-per-line, is the real metric
+- Semantic is the "dangerous sweet spot" — cheap, attractive, quietly wrong on hard logic
+
 ## Current phase
-Pass 1 — Sonnet. Ideas 1-3 complete. Moving to idea 4 (04-habit).
+Pass 1 — Sonnet. Ideas 1-4 complete. Moving to idea 5 (05-predprey).
 
 ## How to resume
 1. Check `runs.jsonl` to see which ideas are done (filter by `coding_model` + `arm`)
