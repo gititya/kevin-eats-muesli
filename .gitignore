@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env*
+*.pem
+*.p12
+*serviceaccount*
+
+.DS_Store
+adversarial/
+initial_files/
