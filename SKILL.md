@@ -16,8 +16,21 @@ STT compression A/B experiment. Tests whether compressing a Muesli dictation tra
 - Caveman: $0.228, 183.3k total context, 320 lines — dark warm, read kora spec file, kora-adjacent
 - Surprise: compressed prompts cost MORE (agent wrote more code, read more context)
 
+## Idea 2 results (02-fd-calc)
+- All 3 arms passed completeness (dual modes, multi-row, columns, persistence)
+- Raw: $0.211, 90.3k context, 241 lines — full-width inline edit, quarterly compounding, score 4
+- Semantic: $0.244, 119.8k context, 532 lines — best UI (summary cards, form), annual compounding, score 5
+- Caveman: $0.207, 116.4k context, 236 lines — cheapest but XSS vuln on bank name, score 2
+
+## Idea 3 results (03-gravity)
+- Caveman FAILED completeness (UX-dead: auto-runs with no Start affordance, user rated 0/5)
+- Raw: $0.239, 474 lines — best physics (dt-scaled, gravity-coupled damping, rest detection), score 4
+- Semantic: $0.181, 212 lines — user's favorite experience, 24% cheaper than raw, score 3
+- Caveman: $0.173, 226 lines — cheapest but undiscoverable, technically works but UX zero, score 1
+- Key finding: caveman preserves feature list but drops framing/intent cues → UX failure mode
+
 ## Current phase
-Pass 1 — Sonnet. Idea 1 (01-todo) complete across all 3 arms. Moving to idea 2 (02-fd-calc).
+Pass 1 — Sonnet. Ideas 1-3 complete. Moving to idea 4 (04-habit).
 
 ## How to resume
 1. Check `runs.jsonl` to see which ideas are done (filter by `coding_model` + `arm`)
