@@ -38,8 +38,15 @@ STT compression A/B experiment. Tests whether compressing a Muesli dictation tra
 - Key finding: cost-per-correct-constraint, not cost-per-line, is the real metric
 - Semantic is the "dangerous sweet spot" — cheap, attractive, quietly wrong on hard logic
 
+## Idea 5 results (05-predprey)
+- All 3 arms fully complete — fox starvation survived even in semantic (reconstructed from LV model name)
+- Raw: $0.66, 369 lines, score 5 — agent-based sim with spatial world, "wins by huge margin" per user
+- Semantic: $0.212, 407 lines, score 4 — classic LV+Euler, variability from numerical drift
+- Caveman: $0.195, 296 lines, score 4 — LV+RK4 (best math), but uniform graph = less visually engaging
+- Key finding: compression safe when omitted detail is recoverable from a named domain model
+
 ## Current phase
-Pass 1 — Sonnet. Ideas 1-4 complete. Moving to idea 5 (05-predprey).
+Pass 1 — Sonnet. All 5 ideas complete. Awaiting final analysis.
 
 ## How to resume
 1. Check `runs.jsonl` to see which ideas are done (filter by `coding_model` + `arm`)
