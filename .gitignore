@@ -8,3 +8,5 @@ __pycache__/
 .DS_Store
 adversarial/
 initial_files/
+SKILL.md
+stt-compression-ab-spec.md
